@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+html,
+body {
+    scroll-behavior: smooth;
+}
+
+@layer utilities {
+    .reveal {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: all 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .reveal.active {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .animate-slide-in-left {
+        animation: slide-in-left 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    }
+
+    .animate-slide-in-right {
+        animation: slide-in-right 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    }
+
+    @keyframes slide-in-left {
+        0% {
+            opacity: 0;
+            transform: translateX(-60px);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes slide-in-right {
+        0% {
+            opacity: 0;
+            transform: translateX(60px);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+}
+
+/* Premium Dialog Backdrop Styling */
+dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(8px);
+    transition: backdrop-filter 0.3s ease;
+}
