@@ -67,7 +67,12 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const logout = () => {
+    const logout = async () => {
+        try {
+            await api.logout();
+        } catch (error) {
+            console.error('Failed to notify backend of logout:', error.message);
+        }
         localStorage.removeItem('uclose_token');
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('userEmail');

@@ -197,5 +197,16 @@ export const api = {
         const data = await request('/api/settings');
         settingsCache = data;
         return data;
-    }
+    },
+
+    logout: () =>
+        request('/api/auth/logout', {
+            method: 'POST'
+        }),
+
+    changePassword: (currentPassword, newPassword) =>
+        request('/api/auth/change-password', {
+            method: 'PUT',
+            body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+        })
 };

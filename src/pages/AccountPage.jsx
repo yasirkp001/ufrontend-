@@ -107,6 +107,37 @@ const AccountPage = () => {
         }
     };
 
+    // State for Password Change
+    const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
+    const [isChangingPassword, setIsChangingPassword] = useState(false);
+    const [passwordSuccess, setPasswordSuccess] = useState('');
+    const [passwordError, setPasswordError] = useState('');
+
+    const handleChangePassword = async () => {
+        if (!passwordForm.currentPassword || !passwordForm.newPassword) {
+            setPasswordError('Both current and new passwords are required.');
+            return;
+        }
+        if (passwordForm.newPassword.length < 6) {
+            setPasswordError('New password must be at least 6 characters long.');
+            return;
+        }
+
+        setIsChangingPassword(true);
+        setPasswordError('');
+        setPasswordSuccess('');
+
+        try {
+            await api.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+            setPasswordSuccess('Password updated successfully.');
+            setPasswordForm({ currentPassword: '', newPassword: '' });
+        } catch (err) {
+            setPasswordError(err.message || 'Failed to update password.');
+        } finally {
+            setIsChangingPassword(false);
+        }
+    };
+
 
 
     const totalSpent = orders.reduce((acc, order) => acc + parseFloat(order.total), 0).toFixed(2);
@@ -280,6 +311,63 @@ const AccountPage = () => {
                                     </>
                                 ) : (
                                     <span>Save Changes</span>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Change Password Section */}
+                        <div className="pb-4 border-b border-gray-100 mt-12">
+                            <h3 className="text-xl font-bold tracking-tight">Security</h3>
+                            <p className="text-sm text-gray-500 mt-1">Change your account password below.</p>
+                        </div>
+
+                        {passwordSuccess && (
+                            <div className="bg-black text-white p-4 text-xs font-bold tracking-wider uppercase border border-black flex justify-between items-center">
+                                <span>{passwordSuccess}</span>
+                                <button onClick={() => setPasswordSuccess('')} className="hover:text-gray-300">✕</button>
+                            </div>
+                        )}
+
+                        {passwordError && (
+                            <div className="bg-red-50 text-red-800 border border-red-200 p-4 text-xs font-bold tracking-wider uppercase flex justify-between items-center">
+                                <span>{passwordError}</span>
+                                <button onClick={() => setPasswordError('')} className="hover:text-red-900">✕</button>
+                            </div>
+                        )}
+
+                        <div className="flex flex-col gap-6">
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Current Password</label>
+                                <input
+                                    type="password"
+                                    placeholder="••••••••"
+                                    value={passwordForm.currentPassword}
+                                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                                    className="w-full p-4 border border-gray-100 bg-white focus:border-black outline-none transition-all font-medium"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">New Password</label>
+                                <input
+                                    type="password"
+                                    placeholder="••••••••"
+                                    value={passwordForm.newPassword}
+                                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                                    className="w-full p-4 border border-gray-100 bg-white focus:border-black outline-none transition-all font-medium"
+                                />
+                            </div>
+                            <button 
+                                onClick={handleChangePassword}
+                                disabled={isChangingPassword}
+                                className="bg-black text-white p-5 text-[10px] uppercase tracking-[0.3em] font-bold hover:bg-gray-800 transition-all mt-4 disabled:bg-gray-400 flex items-center justify-center gap-2"
+                            >
+                                {isChangingPassword ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                        <span>Updating Password...</span>
+                                    </>
+                                ) : (
+                                    <span>Change Password</span>
                                 )}
                             </button>
                         </div>
