@@ -13,7 +13,7 @@ const CheckoutPage = () => {
     const navigate = useNavigate();
     const { cartItems, cartTotal, clearCart, appliedPromo, discount } = useCart();
     const finalTotal = Math.max(0, cartTotal - discount);
-    const { isAuthenticated, userEmail, loading } = useAuth();
+    const { isAuthenticated, loading } = useAuth();
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     // Order ID Generation

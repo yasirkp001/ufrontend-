@@ -11,6 +11,7 @@ const PageLoader = () => {
         window.scrollTo(0, 0);
 
         // Start showing the loader
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setRenderBase(true);
         setIsAnimating(true);
 

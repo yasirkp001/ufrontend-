@@ -7,7 +7,6 @@ const OrderTrackingPage = () => {
     const { isAuthenticated, loading } = useAuth();
     const location = useLocation();
     const [orderId, setOrderId] = useState('');
-    const [email, setEmail] = useState('');
     const [trackingResult, setTrackingResult] = useState(null);
     const [isSearching, setIsSearching] = useState(false);
     const [error, setError] = useState(null);

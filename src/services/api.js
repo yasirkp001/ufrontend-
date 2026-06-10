@@ -138,10 +138,10 @@ export const api = {
         }),
 
     // Profile settings endpoints
-    updateProfileDetails: (name, phone) => 
+    updateProfileDetails: (name, phone, dp) => 
         request('/api/auth/profile/update', {
             method: 'PUT',
-            body: JSON.stringify({ name, phone })
+            body: JSON.stringify({ name, phone, dp })
         }),
 
     // Coupon endpoints
@@ -169,5 +169,19 @@ export const api = {
         request(`/api/size-guides/category/${categoryName}`),
 
     getSizeGuides: () =>
-        request('/api/size-guides')
+        request('/api/size-guides'),
+
+    // Reviews endpoints
+    getProductReviews: (productId) =>
+        request(`/api/reviews?productId=${productId}`),
+
+    submitProductReview: (productId, rating, comment) =>
+        request('/api/reviews', {
+            method: 'POST',
+            body: JSON.stringify({ product_id: productId, rating, comment })
+        }),
+
+    // Settings endpoint
+    getSiteSettings: () =>
+        request('/api/settings')
 };

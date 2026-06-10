@@ -16,6 +16,16 @@ const ProductDetailPage = () => {
     const [recommended, setRecommended] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Reviews states
+    const [reviews, setReviews] = useState([]);
+    const [user, setUser] = useState(null);
+    const [newRating, setNewRating] = useState(5);
+    const [newComment, setNewComment] = useState('');
+    const [reviewSubmitting, setReviewSubmitting] = useState(false);
+    const [reviewMessage, setReviewMessage] = useState('');
+    const [existingReview, setExistingReview] = useState(null);
+    const [settings, setSettings] = useState(null);
+
     // Size Guide States
     const [showSizeGuide, setShowSizeGuide] = useState(false);
     const [sizeGuide, setSizeGuide] = useState(null);
@@ -23,12 +33,67 @@ const ProductDetailPage = () => {
     const [guideError, setGuideError] = useState(null);
     const dialogRef = React.useRef(null);
 
+    // Populate inputs if user has already reviewed the product
+    useEffect(() => {
+        if (user && reviews.length > 0) {
+            const userReview = reviews.find(r => r.email.toLowerCase() === user.email.toLowerCase());
+            if (userReview) {
+                setExistingReview(userReview);
+                setNewRating(userReview.rating);
+                setNewComment(userReview.comment);
+            } else {
+                setExistingReview(null);
+            }
+        } else {
+            setExistingReview(null);
+        }
+    }, [user, reviews]);
+
+    const handleReviewSubmit = async (e) => {
+        e.preventDefault();
+        if (!newComment.trim()) return;
+        setReviewSubmitting(true);
+        setReviewMessage('');
+        try {
+            const res = await api.submitProductReview(id, newRating, newComment);
+            // Reload reviews to show the updated status
+            const reviewsData = await api.getProductReviews(id);
+            setReviews(reviewsData || []);
+            setReviewMessage(res.message || 'Thank you! Your review has been submitted for moderation.');
+        } catch (err) {
+            console.error('Failed to submit review:', err);
+            alert('Error submitting review: ' + err.message);
+        } finally {
+            setReviewSubmitting(false);
+        }
+    };
+
     useEffect(() => {
         const loadDetails = async () => {
             setLoading(true);
             try {
                 const prodData = await api.getProductById(id);
                 setProduct(prodData);
+
+                // Fetch product reviews
+                const reviewsData = await api.getProductReviews(id);
+                setReviews(reviewsData || []);
+
+                // Fetch user if logged in
+                try {
+                    const me = await api.getMe();
+                    setUser(me.user || null);
+                } catch {
+                    setUser(null);
+                }
+
+                // Fetch site settings
+                try {
+                    const settingsData = await api.getSiteSettings();
+                    setSettings(settingsData || null);
+                } catch (e) {
+                    console.error('Failed to load site settings:', e);
+                }
                 
                 // Default selection to first available size or 'M'
                 if (prodData.sizes && prodData.sizes.length > 0) {
@@ -251,6 +316,142 @@ const ProductDetailPage = () => {
                                 {activeTab === 'shipping' && (
                                     <div className="py-4 text-gray-500 leading-relaxed text-sm animate-in fade-in duration-300">
                                         Free standard delivery on all orders over $200. Express delivery available at checkout. 30-day returns on all unused items.
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Ratings & Reviews */}
+                            <div className="border-b border-gray-100 pb-4">
+                                <button
+                                    onClick={() => setActiveTab(activeTab === 'reviews' ? null : 'reviews')}
+                                    className="w-full flex items-center justify-between py-4 text-left"
+                                >
+                                    <span className="text-[10px] uppercase tracking-widest font-black">Ratings & Reviews ({reviews.length})</span>
+                                    <svg className={`w-4 h-4 transition-transform ${activeTab === 'reviews' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                                {activeTab === 'reviews' && (
+                                    <div className="py-4 text-gray-500 leading-relaxed text-sm animate-in fade-in duration-300">
+                                        {reviews.filter(r => r.approved === 1 || r.approved === true).length > 0 ? (
+                                            <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
+                                                <div className="text-4xl font-bold text-black">
+                                                    {(reviews.filter(r => r.approved === 1 || r.approved === true).reduce((sum, r) => sum + r.rating, 0) / reviews.filter(r => r.approved === 1 || r.approved === true).length).toFixed(1)}
+                                                </div>
+                                                <div>
+                                                    <div className="text-lg" style={{ color: settings?.star_color || '#fbbf24' }}>
+                                                        {'★'.repeat(Math.round(reviews.filter(r => r.approved === 1 || r.approved === true).reduce((sum, r) => sum + r.rating, 0) / reviews.filter(r => r.approved === 1 || r.approved === true).length))}
+                                                        {'☆'.repeat(5 - Math.round(reviews.filter(r => r.approved === 1 || r.approved === true).reduce((sum, r) => sum + r.rating, 0) / reviews.filter(r => r.approved === 1 || r.approved === true).length))}
+                                                    </div>
+                                                    <div className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
+                                                        Based on {reviews.filter(r => r.approved === 1 || r.approved === true).length} approved review{reviews.filter(r => r.approved === 1 || r.approved === true).length > 1 ? 's' : ''}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="mb-6 italic text-gray-400">No approved reviews yet for this product. Be the first to share your thoughts!</p>
+                                        )}
+
+                                        {reviews.length > 0 && (
+                                            <div className="space-y-6 max-h-[300px] overflow-y-auto pr-2 mb-8">
+                                                {reviews.map((rev) => (
+                                                    <div key={rev.id} className="border-b border-gray-100 pb-4">
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <div className="font-bold text-black text-xs uppercase tracking-wider flex items-center gap-2">
+                                                                {rev.name}
+                                                                {(!rev.approved || rev.approved === 1 ? false : true) && (
+                                                                    <span className="bg-yellow-50 text-yellow-700 border border-yellow-200 text-[8px] px-1.5 py-0.5 rounded-sm font-black tracking-widest uppercase">Pending Approval</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-[10px] text-gray-400">{new Date(rev.created_at).toLocaleDateString()}</div>
+                                                        </div>
+                                                        <div className="text-xs mb-2" style={{ color: settings?.star_color || '#fbbf24' }}>
+                                                            {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
+                                                        </div>
+                                                        <p className="text-gray-600 text-xs leading-relaxed">{rev.comment}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <div className="bg-gray-50/50 p-6 rounded-sm border border-gray-100">
+                                            <h4 className="text-[10px] uppercase tracking-widest font-black text-black mb-4">
+                                                {existingReview ? 'Update Your Review' : 'Write a Review'}
+                                            </h4>
+                                            {reviewMessage && (
+                                                <div className="p-3 mb-4 bg-green-50 text-green-700 border border-green-200 text-xs font-bold rounded-sm">
+                                                    {reviewMessage}
+                                                </div>
+                                            )}
+                                            {user ? (
+                                                <form onSubmit={handleReviewSubmit} className="space-y-4">
+                                                    <div>
+                                                        <label className="block text-[9px] uppercase tracking-widest font-black text-gray-400 mb-2">Rating</label>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex gap-2">
+                                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                                    <button
+                                                                        key={star}
+                                                                        type="button"
+                                                                        onClick={() => setNewRating(star)}
+                                                                        className="text-lg transition-transform hover:scale-110"
+                                                                    >
+                                                                        <span style={{ 
+                                                                            color: star <= newRating ? (
+                                                                                newRating === 1 ? '#ef4444' :
+                                                                                newRating === 2 ? '#f97316' :
+                                                                                newRating === 3 ? '#eab308' :
+                                                                                newRating === 4 ? '#22c55e' :
+                                                                                newRating === 5 ? '#10b981' : '#fbbf24'
+                                                                            ) : '#d1d5db' 
+                                                                        }}>★</span>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                            <span 
+                                                                className="text-[10px] uppercase tracking-widest font-black transition-colors duration-300"
+                                                                style={{
+                                                                    color: 
+                                                                        newRating === 1 ? '#ef4444' :
+                                                                        newRating === 2 ? '#f97316' :
+                                                                        newRating === 3 ? '#eab308' :
+                                                                        newRating === 4 ? '#22c55e' :
+                                                                        newRating === 5 ? '#10b981' : '#9ca3af'
+                                                                }}
+                                                            >
+                                                                {newRating === 1 && 'Very Dissatisfied'}
+                                                                {newRating === 2 && 'Dissatisfied'}
+                                                                {newRating === 3 && 'Neutral'}
+                                                                {newRating === 4 && 'Satisfied'}
+                                                                {newRating === 5 && 'Very Satisfied'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[9px] uppercase tracking-widest font-black text-gray-400 mb-2">Comments</label>
+                                                        <textarea
+                                                            required
+                                                            placeholder="Describe your experience with this product..."
+                                                            className="w-full p-3 text-xs border border-gray-200 rounded-sm bg-white focus:outline-none focus:border-black text-black"
+                                                            style={{ height: '80px', resize: 'vertical' }}
+                                                            value={newComment}
+                                                            onChange={(e) => setNewComment(e.target.value)}
+                                                        />
+                                                    </div>
+                                                    <button
+                                                        type="submit"
+                                                        disabled={reviewSubmitting}
+                                                        className="py-3 px-6 bg-black text-white hover:bg-gray-800 text-[10px] uppercase tracking-widest font-black transition-all rounded-sm"
+                                                    >
+                                                        {reviewSubmitting ? 'Submitting...' : existingReview ? 'Update Review' : 'Submit Review'}
+                                                    </button>
+                                                </form>
+                                            ) : (
+                                                <div className="text-xs text-gray-400 leading-relaxed">
+                                                    Please <Link to="/login" className="text-black font-bold border-b border-black">login</Link> to submit a rating and comment for this product.
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>

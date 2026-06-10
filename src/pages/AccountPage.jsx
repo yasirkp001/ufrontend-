@@ -4,6 +4,7 @@ import Footer from '../components/Footer';
 import useScrollReveal from '../hooks/useScrollReveal';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import AccountHero from '../components/AccountHero';
 
 const AccountPage = () => {
     useScrollReveal();
@@ -11,12 +12,14 @@ const AccountPage = () => {
     const { isAuthenticated, userEmail, user, loading, logout, refreshUser } = useAuth();
     const [orders, setOrders] = useState([]);
     const [activeTab, setActiveTab] = useState('dashboard');
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     // State for Profile
     const [profile, setProfile] = useState({
         name: user?.name || userEmail?.split('@')[0] || 'User',
         phone: user?.phone || '',
-        email: userEmail || ''
+        email: userEmail || '',
+        dp: user?.dp || ''
     });
 
     const [isSaving, setIsSaving] = useState(false);
@@ -24,7 +27,7 @@ const AccountPage = () => {
     const [profileError, setProfileError] = useState('');
 
     // State for Addresses
-    const [addresses, setAddresses] = useState([
+    const [addresses] = useState([
         { id: 1, type: 'Home', address: '123 Fashion Ave, NY 10001', isDefault: true },
         { id: 2, type: 'Office', address: '456 Business St, NY 10002', isDefault: false }
     ]);
@@ -36,7 +39,7 @@ const AccountPage = () => {
     const [activeCoupons, setActiveCoupons] = useState([]);
 
     // State for Payments
-    const [paymentMethods, setPaymentMethods] = useState([
+    const [paymentMethods] = useState([
         { id: 1, type: 'Visa', last4: '4242', expiry: '12/26', isDefault: true },
         { id: 2, type: 'Mastercard', last4: '8888', expiry: '05/25', isDefault: false }
     ]);
@@ -73,14 +76,14 @@ const AccountPage = () => {
             setProfile({
                 name: user.name || '',
                 phone: user.phone || '',
-                email: user.email || ''
+                email: user.email || '',
+                dp: user.dp || ''
             });
         }
     }, [user]);
 
     const handleLogout = () => {
-        logout();
-        navigate('/');
+        setShowLogoutConfirm(true);
     };
 
     const handleSaveProfile = async () => {
@@ -94,7 +97,7 @@ const AccountPage = () => {
         setProfileSuccess('');
 
         try {
-            await api.updateProfileDetails(profile.name.trim(), profile.phone.trim());
+            await api.updateProfileDetails(profile.name.trim(), profile.phone.trim(), profile.dp.trim());
             setProfileSuccess('Profile updated successfully.');
             await refreshUser();
         } catch (err) {
@@ -190,6 +193,24 @@ const AccountPage = () => {
                             <h3 className="text-xl font-bold tracking-tight">Profile Settings</h3>
                             <p className="text-sm text-gray-500 mt-1">Update your personal information and contact details.</p>
                         </div>
+
+                        {/* Premium Avatar Preview Section */}
+                        <div className="flex items-center gap-6 p-6 bg-white border border-gray-100 shadow-sm rounded-sm">
+                            <div className="relative group w-20 h-20 rounded-full overflow-hidden border border-gray-200 shrink-0">
+                                <img
+                                    src={profile.dp || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(profile.name || 'User')}`}
+                                    alt="Profile Avatar"
+                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    onError={(e) => {
+                                        e.target.src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(profile.name || 'User')}`;
+                                    }}
+                                />
+                            </div>
+                            <div>
+                                <h4 className="font-bold tracking-tight text-lg">{profile.name || 'Your Name'}</h4>
+                                <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-semibold">Customer Account</p>
+                            </div>
+                        </div>
                         
                         {profileSuccess && (
                             <div className="bg-black text-white p-4 text-xs font-bold tracking-wider uppercase border border-black flex justify-between items-center">
@@ -206,6 +227,17 @@ const AccountPage = () => {
                         )}
 
                         <div className="flex flex-col gap-6">
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Profile Picture URL</label>
+                                <input
+                                    type="text"
+                                    placeholder="https://example.com/avatar.jpg"
+                                    value={profile.dp}
+                                    onChange={(e) => setProfile({ ...profile, dp: e.target.value })}
+                                    className="w-full p-4 border border-gray-100 bg-white focus:border-black outline-none transition-all font-medium"
+                                    disabled={isSaving}
+                                />
+                            </div>
                             <div className="flex flex-col gap-2">
                                 <label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Full Name</label>
                                 <input
@@ -477,14 +509,25 @@ const AccountPage = () => {
 
     return (
         <div className="bg-[#FAFAFA] min-h-screen font-sans">
-            <div className="pt-32 pb-20 px-6 md:px-14 lg:px-20 max-w-7xl mx-auto min-h-[70vh]">
+            <div className="h-20 md:h-24"></div> {/* Spacer for fixed white navbar */}
+            <AccountHero />
+            <div className="pt-12 pb-20 px-6 md:px-14 lg:px-20 max-w-7xl mx-auto min-h-[70vh]">
 
                 {/* Header Section */}
-                <div className="mb-14 reveal">
-                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tighter text-black mb-1 leading-none uppercase">My Account.</h1>
-                    <p className="text-gray-500 text-sm md:text-lg font-medium tracking-tight mt-2 flex items-center gap-2 italic">
-                        Logged in as <span className="text-black not-italic font-bold border-b border-black outline-offset-4">{userEmail}</span>
-                    </p>
+                <div className="mb-14 reveal flex items-center gap-4">
+                    <img
+                        src={user?.dp || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user?.name || 'User')}`}
+                        alt="Avatar"
+                        className="w-12 h-12 rounded-full object-cover border border-gray-200 shadow-sm"
+                        onError={(e) => {
+                            e.target.src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user?.name || 'User')}`;
+                        }}
+                    />
+                    <div>
+                        <p className="text-gray-500 text-sm md:text-lg font-medium tracking-tight flex items-center gap-2 italic">
+                            Logged in as <span className="text-black not-italic font-bold border-b border-black outline-offset-4">{userEmail}</span>
+                        </p>
+                    </div>
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-12 lg:gap-20">
@@ -536,6 +579,32 @@ const AccountPage = () => {
 
 
 
+            {showLogoutConfirm && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white p-8 md:p-10 border border-gray-100 max-w-sm w-full mx-6 shadow-2xl rounded-sm animate-in zoom-in-95 duration-200">
+                        <h3 className="text-xl font-bold tracking-tight mb-2 uppercase text-black">Logout</h3>
+                        <p className="text-sm text-gray-500 mb-8 leading-relaxed">Are you sure you want to logout?</p>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setShowLogoutConfirm(false)}
+                                className="flex-1 border border-black p-4 text-[10px] uppercase tracking-[0.2em] font-bold hover:bg-gray-50 transition-all text-center text-black"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowLogoutConfirm(false);
+                                    logout();
+                                    navigate('/');
+                                }}
+                                className="flex-1 bg-red-600 text-white p-4 text-[10px] uppercase tracking-[0.2em] font-bold hover:bg-red-700 transition-all text-center"
+                            >
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <Footer />
         </div>
     );

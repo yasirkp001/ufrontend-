@@ -1,5 +1,5 @@
 import React from 'react';
-import heroImg from '../../.gemini/antigravity/brain/963502d3-c195-401c-84f3-bedf68c2b7ca/account_hero_1773052631982.png';
+import heroImg from '../assets/account_hero.png';
 
 const AccountHero = () => {
     return (

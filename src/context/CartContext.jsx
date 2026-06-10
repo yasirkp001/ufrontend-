@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 
 const CartContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useCart = () => useContext(CartContext);
 
 export const CartProvider = ({ children }) => {
@@ -15,7 +16,6 @@ export const CartProvider = ({ children }) => {
     const [cartItems, setCartItems] = useState([]);
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [appliedPromo, setAppliedPromo] = useState(null);
-    const [discount, setDiscount] = useState(0);
 
     // Sync cart when authentication status changes
     useEffect(() => {
@@ -105,25 +105,17 @@ export const CartProvider = ({ children }) => {
     const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
     const cartTotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
 
-    // Automatically recalculate discount when cartItems, cartTotal, or appliedPromo changes
-    useEffect(() => {
-        if (!appliedPromo) {
-            setDiscount(0);
-            return;
-        }
-
-        if (cartTotal < appliedPromo.min_purchase) {
-            setAppliedPromo(null);
-            setDiscount(0);
-            return;
-        }
-
+    // Discount is derived from the applied promo and current cart total.
+    // Below the minimum purchase the promo simply yields no discount (it
+    // re-applies automatically once the cart total qualifies again).
+    const discount = useMemo(() => {
+        if (!appliedPromo) return 0;
+        if (cartTotal < appliedPromo.min_purchase) return 0;
         if (appliedPromo.discount_type === 'percentage') {
-            setDiscount(cartTotal * (appliedPromo.discount_value / 100));
-        } else {
-            setDiscount(appliedPromo.discount_value);
+            return cartTotal * (appliedPromo.discount_value / 100);
         }
-    }, [cartItems, cartTotal, appliedPromo]);
+        return appliedPromo.discount_value;
+    }, [cartTotal, appliedPromo]);
 
     return (
         <CartContext.Provider value={{

@@ -9,6 +9,7 @@ const Navbar = () => {
     const [isScrolled, setIsScrolled] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const location = useLocation();
 
     useEffect(() => {
@@ -28,6 +29,7 @@ const Navbar = () => {
 
     // Close menus on route change
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setIsMobileMenuOpen(false);
         setShowUserMenu(false);
     }, [location]);
@@ -104,7 +106,10 @@ const Navbar = () => {
                                     <Link to="/orders" className="relative z-10 block text-[11px] uppercase tracking-widest font-bold mb-5 hover:text-gray-500 transition-colors">My Orders</Link>
                                     <div className="relative z-10 pt-4 border-t border-gray-100">
                                         <button
-                                            onClick={() => { logout(); setShowUserMenu(false); }}
+                                            onClick={() => {
+                                                setShowLogoutConfirm(true);
+                                                setShowUserMenu(false);
+                                            }}
                                             className="text-[11px] uppercase tracking-widest font-bold text-red-600 hover:text-red-700 transition-colors w-full text-left"
                                         >
                                             Logout
@@ -178,6 +183,31 @@ const Navbar = () => {
                                 )}
                             </Link>
                         ))}
+                    </div>
+                </div>
+            )}
+            {showLogoutConfirm && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white p-8 md:p-10 border border-gray-100 max-w-sm w-full mx-6 shadow-2xl rounded-sm animate-in zoom-in-95 duration-200">
+                        <h3 className="text-xl font-bold tracking-tight mb-2 uppercase text-black">Logout</h3>
+                        <p className="text-sm text-gray-500 mb-8 leading-relaxed">Are you sure you want to logout?</p>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setShowLogoutConfirm(false)}
+                                className="flex-1 border border-black p-4 text-[10px] uppercase tracking-[0.2em] font-bold hover:bg-gray-50 transition-all text-center text-black"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowLogoutConfirm(false);
+                                    logout();
+                                }}
+                                className="flex-1 bg-red-600 text-white p-4 text-[10px] uppercase tracking-[0.2em] font-bold hover:bg-red-700 transition-all text-center"
+                            >
+                                Logout
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
