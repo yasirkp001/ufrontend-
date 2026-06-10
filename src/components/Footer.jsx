@@ -86,10 +86,10 @@ const Footer = () => {
                     <div className="flex items-center gap-6">
                         <span className="text-black opacity-50">Accepted Payments</span>
                         <div className="flex gap-4 items-center transition-opacity hover:opacity-100">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="Google Pay" className="h-3 md:h-3.5" />
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-4 md:h-4.5" />
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="PayPal" className="h-4 md:h-4.5" />
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b0/Apple_Pay_logo.svg" alt="Apple Pay" className="h-4 md:h-4.5" />
+                            <img src="/google-pay.svg" alt="Google Pay" className="h-3 md:h-3.5" />
+                            <img src="/mastercard.svg" alt="Mastercard" className="h-4 md:h-4.5" />
+                            <img src="/paypal.svg" alt="PayPal" className="h-4 md:h-4.5" />
+                            <img src="/apple-pay.svg" alt="Apple Pay" className="h-4 md:h-4.5" />
                         </div>
                     </div>
 
