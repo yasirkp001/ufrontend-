@@ -1,5 +1,6 @@
-// Frontend API service to communicate with the backend Express server
-const API_BASE_URL = ''; // Empty string because Vite proxy will route '/api' calls to backend
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? '' 
+    : 'https://ubackend-guk8.onrender.com';
 
 async function request(endpoint, options = {}) {
     const token = localStorage.getItem('uclose_token');
