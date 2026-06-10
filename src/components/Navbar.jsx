@@ -2,8 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { api } from '../services/api';
 
 const Navbar = () => {
+    const [settings, setSettings] = useState(null);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const data = await api.getSiteSettings();
+                setSettings(data);
+            } catch (err) {
+                console.error('Failed to load settings in Navbar:', err);
+            }
+        };
+        fetchSettings();
+    }, []);
     const { isAuthenticated, logout } = useAuth();
     const { cartCount } = useCart();
     const [isScrolled, setIsScrolled] = useState(false);
@@ -60,7 +74,7 @@ const Navbar = () => {
                 <div className="flex items-center w-1/3">
                     {/* Logo / Brand Name */}
                     <Link to="/" className="text-xl md:text-2xl font-medium tracking-tight hover:opacity-50 transition-opacity whitespace-nowrap">
-                        Uclose Co.
+                        {settings?.site_name || "Uclose Co."}
                     </Link>
                 </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { api } from '../services/api';
+import { api, getImageUrl } from '../services/api';
 
 const ProductSection = ({ showFilter = false }) => {
     const { addToCart } = useCart();
@@ -117,7 +117,7 @@ const ProductSection = ({ showFilter = false }) => {
                     <Link key={product.id} to={`/product/${product.id}`} className="group flex flex-col animate-in fade-in zoom-in-95 duration-500 text-black no-underline cursor-pointer">
                         <div className="overflow-hidden bg-[#f4f4f4] aspect-[4/5] relative w-full mb-4">
                             <img
-                                src={product.image}
+                                src={getImageUrl(product.image)}
                                 alt={product.name}
                                 className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700 ease-out"
                             />

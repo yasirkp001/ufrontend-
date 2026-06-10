@@ -1,6 +1,13 @@
-const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+export const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
     ? '' 
     : 'https://ubackend-guk8.onrender.com';
+
+export const getImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+    return `${API_BASE_URL}${url}`;
+};
+
 
 async function request(endpoint, options = {}) {
     const token = localStorage.getItem('uclose_token');
@@ -33,6 +40,8 @@ async function request(endpoint, options = {}) {
         throw error;
     }
 }
+
+let settingsCache = null;
 
 export const api = {
     // Auth endpoints
@@ -183,6 +192,10 @@ export const api = {
         }),
 
     // Settings endpoint
-    getSiteSettings: () =>
-        request('/api/settings')
+    getSiteSettings: async () => {
+        if (settingsCache) return settingsCache;
+        const data = await request('/api/settings');
+        settingsCache = data;
+        return data;
+    }
 };

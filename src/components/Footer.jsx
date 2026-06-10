@@ -1,6 +1,22 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../services/api';
 
 const Footer = () => {
+    const [settings, setSettings] = useState(null);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const data = await api.getSiteSettings();
+                setSettings(data);
+            } catch (err) {
+                console.error('Failed to load settings in Footer:', err);
+            }
+        };
+        fetchSettings();
+    }, []);
+
     return (
         <footer className="bg-white text-black py-20 px-6 md:px-14 lg:px-20 font-sans border-t border-gray-100">
             <div className="max-w-[1400px] mx-auto">
@@ -11,7 +27,7 @@ const Footer = () => {
                     {/* Left Side: Brand Name */}
                     <div className="lg:w-1/3">
                         <h2 className="text-7xl font-medium tracking-tighter">
-                            Uclose Co.
+                            {settings?.site_name || "Uclose Co."}
                         </h2>
                     </div>
 
@@ -64,7 +80,7 @@ const Footer = () => {
 
                 {/* Bottom Bar */}
                 <div className="pt-8 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] text-gray-400 uppercase tracking-[0.2em] font-bold">
-                    <p>© 2026 Uclose Co. Crafted in India.</p>
+                    <p>© 2026 {settings?.site_name || "Uclose Co."}. Crafted in India.</p>
 
                     {/* Payment Icons at Bottom */}
                     <div className="flex items-center gap-6">

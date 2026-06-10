@@ -4,7 +4,7 @@ import Footer from '../components/Footer';
 import useScrollReveal from '../hooks/useScrollReveal';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../services/api';
+import { api, getImageUrl } from '../services/api';
 
 const CartPage = () => {
     useScrollReveal();
@@ -119,7 +119,7 @@ const CartPage = () => {
                                     {cartItems.map((item) => (
                                         <div key={`${item.id}-${item.size}`} className="flex flex-col md:flex-row gap-8 border-b border-gray-100 pb-8 last:border-0 group">
                                             <div className="w-full md:w-40 aspect-[4/5] bg-[#f4f4f4] overflow-hidden relative">
-                                                <img src={item.image} alt={item.name} className="w-full h-full object-cover object-top filter grayscale group-hover:grayscale-0 transition-all duration-500" />
+                                                <img src={getImageUrl(item.image)} alt={item.name} className="w-full h-full object-cover object-top filter grayscale group-hover:grayscale-0 transition-all duration-500" />
                                             </div>
                                             <div className="flex-1 flex flex-col justify-between py-1">
                                                 <div>

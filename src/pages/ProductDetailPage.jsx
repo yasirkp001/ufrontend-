@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { api } from '../services/api';
+import { api, getImageUrl } from '../services/api';
 import { useCart } from '../context/CartContext';
 import Footer from '../components/Footer';
 import useScrollReveal from '../hooks/useScrollReveal';
@@ -198,7 +198,7 @@ const ProductDetailPage = () => {
                     <div className="lg:sticky lg:top-32 w-full order-1 lg:order-1 animate-in fade-in slide-in-from-bottom-6 duration-1000">
                         <div className="aspect-[4/5] bg-[#f8f8f8] overflow-hidden rounded-sm group">
                             <img
-                                src={product.image}
+                                src={getImageUrl(product.image)}
                                 alt={product.name}
                                 className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-1000"
                                 loading="eager"
@@ -466,7 +466,7 @@ const ProductDetailPage = () => {
                         {recommended.map(item => (
                             <Link key={item.id} to={`/product/${item.id}`} className="group no-underline">
                                 <div className="aspect-[3/4] bg-[#f8f8f8] overflow-hidden mb-4">
-                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                                    <img src={getImageUrl(item.image)} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                                 </div>
                                 <h3 className="text-xs uppercase tracking-widest font-black text-black group-hover:opacity-60 transition-opacity">{item.name}</h3>
                                 <p className="text-gray-400 text-[10px] mt-1">${item.price}</p>

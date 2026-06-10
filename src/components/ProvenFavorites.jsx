@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
+import { getImageUrl } from '../services/api';
 
 const ProvenFavorites = () => {
     const products = [
@@ -67,7 +68,7 @@ const ProvenFavorites = () => {
                     <div key={product.id} className="group cursor-pointer flex flex-col reveal">
                         <div className="overflow-hidden bg-[#f4f4f4] aspect-[3/4] relative w-full mb-6">
                             <img
-                                src={product.image}
+                                src={getImageUrl(product.image)}
                                 alt={product.title}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                             />
