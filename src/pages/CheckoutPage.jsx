@@ -7,6 +7,10 @@ import { useAuth } from '../context/AuthContext';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { api } from '../services/api';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51Pmock_key_here');
 
 const CheckoutPage = () => {
     useScrollReveal();
@@ -16,6 +20,8 @@ const CheckoutPage = () => {
     const { isAuthenticated, loading } = useAuth();
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [clientSecret, setClientSecret] = useState(null);
+    const [isSimulated, setIsSimulated] = useState(true);
     // Order ID Generation
     const [orderId] = useState(() => 'UC-' + Math.random().toString(36).substring(2, 11).toUpperCase());
 
@@ -47,15 +53,52 @@ const CheckoutPage = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const nextStep = (e) => {
+    const nextStep = async (e) => {
         e.preventDefault();
-        setCurrentStep(2);
-        window.scrollTo(0, 0);
+        setIsProcessing(true);
+        try {
+            // Fetch Payment Intent from backend
+            const res = await api.createPaymentIntent(finalTotal, 'usd');
+            setClientSecret(res.clientSecret);
+            setIsSimulated(res.isSimulated);
+            setCurrentStep(2);
+        } catch (err) {
+            console.error('Failed to init payment gateway:', err.message);
+            setIsSimulated(true); // Fallback to simulated mode
+            setCurrentStep(2);
+        } finally {
+            setIsProcessing(false);
+            window.scrollTo(0, 0);
+        }
     };
 
     const prevStep = () => {
         setCurrentStep(1);
         window.scrollTo(0, 0);
+    };
+
+    const handlePaymentSuccessDirect = async () => {
+        setIsProcessing(true);
+        const newOrder = {
+            id: orderId,
+            items: [...cartItems],
+            total: finalTotal,
+            paymentMethod: 'stripe',
+            shippingDetails: formData,
+            promoCode: appliedPromo?.code || null,
+            discount: discount || 0
+        };
+
+        try {
+            await api.placeOrder(newOrder);
+            setIsProcessing(false);
+            setIsSuccess(true);
+            clearCart();
+        } catch (err) {
+            console.error('Checkout failed:', err.message);
+            setIsProcessing(false);
+            alert('Checkout failed: ' + err.message);
+        }
     };
 
     const handleCheckout = async (e) => {
@@ -281,85 +324,94 @@ const CheckoutPage = () => {
                                     ))}
                                 </div>
 
-                                <form onSubmit={handleCheckout} className="flex flex-col gap-10">
-                                    {paymentMethod === 'stripe' && (
-                                        <div className="flex flex-col gap-10">
-                                            <div className="flex flex-col gap-2">
-                                                <label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Card Number</label>
-                                                <input required name="cardNumber" value={formData.cardNumber} onChange={handleInputChange} type="text" placeholder="0000 0000 0000 0000" className="bg-transparent border-b border-gray-200 py-3 focus:border-black outline-none transition-colors text-lg font-light" />
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-8">
+                                {paymentMethod === 'stripe' && !isSimulated ? (
+                                    <StripePaymentWrapper 
+                                        clientSecret={clientSecret} 
+                                        handlePaymentSuccess={handlePaymentSuccessDirect} 
+                                        isProcessing={isProcessing} 
+                                        finalTotal={finalTotal} 
+                                    />
+                                ) : (
+                                    <form onSubmit={handleCheckout} className="flex flex-col gap-10">
+                                        {paymentMethod === 'stripe' && (
+                                            <div className="flex flex-col gap-10">
                                                 <div className="flex flex-col gap-2">
-                                                    <label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Expiry (MM/YY)</label>
-                                                    <input required name="expiry" value={formData.expiry} onChange={handleInputChange} type="text" placeholder="MM / YY" className="bg-transparent border-b border-gray-200 py-3 focus:border-black outline-none transition-colors text-lg font-light" />
+                                                    <label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Card Number</label>
+                                                    <input required name="cardNumber" value={formData.cardNumber} onChange={handleInputChange} type="text" placeholder="4242 4242 4242 4242" className="bg-transparent border-b border-gray-200 py-3 focus:border-black outline-none transition-colors text-lg font-light" />
                                                 </div>
-                                                <div className="flex flex-col gap-2">
-                                                    <label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">CVC</label>
-                                                    <input required name="cvc" value={formData.cvc} onChange={handleInputChange} type="text" placeholder="000" className="bg-transparent border-b border-gray-200 py-3 focus:border-black outline-none transition-colors text-lg font-light" />
+                                                <div className="grid grid-cols-2 gap-8">
+                                                    <div className="flex flex-col gap-2">
+                                                        <label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Expiry (MM/YY)</label>
+                                                        <input required name="expiry" value={formData.expiry} onChange={handleInputChange} type="text" placeholder="12 / 29" className="bg-transparent border-b border-gray-200 py-3 focus:border-black outline-none transition-colors text-lg font-light" />
+                                                    </div>
+                                                    <div className="flex flex-col gap-2">
+                                                        <label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">CVC</label>
+                                                        <input required name="cvc" value={formData.cvc} onChange={handleInputChange} type="text" placeholder="123" className="bg-transparent border-b border-gray-200 py-3 focus:border-black outline-none transition-colors text-lg font-light" />
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    )}
-
-                                    {paymentMethod === 'paypal' && (
-                                        <div className="p-8 bg-blue-50/50 rounded-sm border border-blue-100 flex flex-col items-center justify-center text-center">
-                                            <p className="text-sm text-blue-600 font-medium mb-6">Scan the QR code below using your PayPal app to securely pay.</p>
-                                            <div className="bg-white p-4 rounded-xl shadow-sm border border-blue-100 mb-6 w-48 h-48 flex items-center justify-center">
-                                                <img
-                                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://paypal.me/uclosestore/${finalTotal.toFixed(2)}USD`}
-                                                    alt="PayPal QR Code"
-                                                    className="w-full h-full object-contain"
-                                                />
-                                            </div>
-                                            <p className="text-xs text-blue-800 font-bold uppercase tracking-widest">Amount to pay: ${finalTotal.toFixed(2)}</p>
-                                        </div>
-                                    )}
-
-                                    {paymentMethod === 'gpay' && (
-                                        <div className="p-8 bg-gray-50 rounded-sm border border-gray-200 flex flex-col items-center justify-center text-center">
-                                            <p className="text-sm text-gray-600 font-medium mb-6">Scan the QR code below using any UPI app to securely pay.</p>
-                                            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 w-48 h-48 flex items-center justify-center">
-                                                <img
-                                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=uclosestore@okhdfcbank&pn=Uclose%20Co&cu=INR&am=${finalTotal.toFixed(2)}`}
-                                                    alt="Google Pay QR Code"
-                                                    className="w-full h-full object-contain"
-                                                />
-                                            </div>
-                                            <p className="text-xs text-black font-bold uppercase tracking-widest">Amount to pay: ${finalTotal.toFixed(2)}</p>
-                                        </div>
-                                    )}
-
-                                    {paymentMethod === 'cod' && (
-                                        <div className="p-8 bg-green-50/50 rounded-sm border border-green-100">
-                                            <p className="text-sm text-green-700 font-medium">You will pay <span className="font-bold">${finalTotal.toFixed(2)}</span> in cash upon delivery of your order.</p>
-                                        </div>
-                                    )}
-
-                                    {paymentMethod === 'wallet' && (
-                                        <div className="p-8 bg-purple-50/50 rounded-sm border border-purple-100 flex flex-col items-center justify-center text-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-purple-600 mb-4">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
-                                            </svg>
-                                            <p className="text-sm text-purple-700 font-medium mb-2">Pay securely using your Uclose Wallet balance.</p>
-                                            <p className="text-xs text-purple-800 font-bold uppercase tracking-widest">Amount to deduct: ${finalTotal.toFixed(2)}</p>
-                                        </div>
-                                    )}
-
-                                    <button
-                                        type="submit"
-                                        disabled={isProcessing}
-                                        className="w-full bg-black text-white py-6 text-xs uppercase tracking-widest font-bold mt-10 hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-4"
-                                    >
-                                        {isProcessing ? (
-                                            <>
-                                                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-                                                Processing Order...
-                                            </>
-                                        ) : (
-                                            paymentMethod === 'cod' ? 'Confirm Delivery Order' : paymentMethod === 'wallet' ? 'Pay with Wallet' : `Complete Purchase — $${finalTotal.toFixed(2)}`
                                         )}
-                                    </button>
-                                </form>
+
+                                        {paymentMethod === 'paypal' && (
+                                            <div className="p-8 bg-blue-50/50 rounded-sm border border-blue-100 flex flex-col items-center justify-center text-center">
+                                                <p className="text-sm text-blue-600 font-medium mb-6">Scan the QR code below using your PayPal app to securely pay.</p>
+                                                <div className="bg-white p-4 rounded-xl shadow-sm border border-blue-100 mb-6 w-48 h-48 flex items-center justify-center">
+                                                    <img
+                                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://paypal.me/uclosestore/${finalTotal.toFixed(2)}USD`}
+                                                        alt="PayPal QR Code"
+                                                        className="w-full h-full object-contain"
+                                                    />
+                                                </div>
+                                                <p className="text-xs text-blue-800 font-bold uppercase tracking-widest">Amount to pay: ${finalTotal.toFixed(2)}</p>
+                                            </div>
+                                        )}
+
+                                        {paymentMethod === 'gpay' && (
+                                            <div className="p-8 bg-gray-50 rounded-sm border border-gray-200 flex flex-col items-center justify-center text-center">
+                                                <p className="text-sm text-gray-600 font-medium mb-6">Scan the QR code below using any UPI app to securely pay.</p>
+                                                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 w-48 h-48 flex items-center justify-center">
+                                                    <img
+                                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=uclosestore@okhdfcbank&pn=Uclose%20Co&cu=INR&am=${finalTotal.toFixed(2)}`}
+                                                        alt="Google Pay QR Code"
+                                                        className="w-full h-full object-contain"
+                                                    />
+                                                </div>
+                                                <p className="text-xs text-black font-bold uppercase tracking-widest">Amount to pay: ${finalTotal.toFixed(2)}</p>
+                                            </div>
+                                        )}
+
+                                        {paymentMethod === 'cod' && (
+                                            <div className="p-8 bg-green-50/50 rounded-sm border border-green-100">
+                                                <p className="text-sm text-green-700 font-medium">You will pay <span className="font-bold">${finalTotal.toFixed(2)}</span> in cash upon delivery of your order.</p>
+                                            </div>
+                                        )}
+
+                                        {paymentMethod === 'wallet' && (
+                                            <div className="p-8 bg-purple-50/50 rounded-sm border border-purple-100 flex flex-col items-center justify-center text-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-purple-600 mb-4">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
+                                                </svg>
+                                                <p className="text-sm text-purple-700 font-medium mb-2">Pay securely using your Uclose Wallet balance.</p>
+                                                <p className="text-xs text-purple-800 font-bold uppercase tracking-widest">Amount to deduct: ${finalTotal.toFixed(2)}</p>
+                                            </div>
+                                        )}
+
+                                        <button
+                                            type="submit"
+                                            disabled={isProcessing}
+                                            className="w-full bg-black text-white py-6 text-xs uppercase tracking-widest font-bold mt-10 hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-4"
+                                        >
+                                            {isProcessing ? (
+                                                <>
+                                                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                                    Processing Order...
+                                                </>
+                                            ) : (
+                                                paymentMethod === 'cod' ? 'Confirm Delivery Order' : paymentMethod === 'wallet' ? 'Pay with Wallet' : `Complete Purchase — $${finalTotal.toFixed(2)}`
+                                            )}
+                                        </button>
+                                    </form>
+                                )}
                             </div>
                         )}
                     </div>
@@ -408,6 +460,97 @@ const CheckoutPage = () => {
 
             <Footer />
         </div>
+    );
+};
+
+const StripePaymentForm = ({ clientSecret, handlePaymentSuccess, isProcessing, finalTotal }) => {
+    const stripe = useStripe();
+    const elements = useElements();
+    const [cardError, setCardError] = useState(null);
+    const [paymentProcessing, setPaymentProcessing] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!stripe || !elements) return;
+
+        setPaymentProcessing(true);
+        setCardError(null);
+
+        try {
+            const cardElement = elements.getElement(CardElement);
+            const { error, paymentIntent } = await stripe.confirmCardPayment(
+                clientSecret,
+                {
+                    payment_method: {
+                        card: cardElement,
+                    },
+                }
+            );
+
+            if (error) {
+                setCardError(error.message);
+                setPaymentProcessing(false);
+            } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+                handlePaymentSuccess();
+            }
+        } catch (err) {
+            setCardError(err.message || 'Payment confirmation failed.');
+            setPaymentProcessing(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-10">
+            <div className="p-6 border border-gray-200 rounded-sm bg-gray-50/50 text-black">
+                <CardElement options={{
+                    style: {
+                        base: {
+                            fontFamily: 'Outfit, sans-serif',
+                            fontSize: '18px',
+                            color: '#000000',
+                            '::placeholder': {
+                                color: '#aab7c4',
+                            },
+                        },
+                        invalid: {
+                            color: '#9e2146',
+                        },
+                    },
+                }} />
+            </div>
+            {cardError && (
+                <div className="text-red-500 text-xs font-semibold uppercase tracking-wider text-center bg-red-50 py-3 border border-red-100">
+                    {cardError}
+                </div>
+            )}
+            <button
+                type="submit"
+                disabled={isProcessing || paymentProcessing || !stripe}
+                className="w-full bg-black text-white py-6 text-xs uppercase tracking-widest font-bold mt-10 hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-4"
+            >
+                {isProcessing || paymentProcessing ? (
+                    <>
+                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                        Processing Payment...
+                    </>
+                ) : (
+                    `Complete Purchase — $${finalTotal.toFixed(2)}`
+                )}
+            </button>
+        </form>
+    );
+};
+
+const StripePaymentWrapper = ({ clientSecret, handlePaymentSuccess, isProcessing, finalTotal }) => {
+    return (
+        <Elements stripe={stripePromise} options={{ clientSecret }}>
+            <StripePaymentForm 
+                clientSecret={clientSecret} 
+                handlePaymentSuccess={handlePaymentSuccess} 
+                isProcessing={isProcessing} 
+                finalTotal={finalTotal} 
+            />
+        </Elements>
     );
 };
 

@@ -1,6 +1,7 @@
-export const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-    ? '' 
-    : 'https://ubackend-guk8.onrender.com';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+        ? '' 
+        : 'https://ubackend-guk8.onrender.com');
 
 export const getImageUrl = (url) => {
     if (!url) return '';
@@ -31,6 +32,18 @@ async function request(endpoint, options = {}) {
         const data = await response.json();
         
         if (!response.ok) {
+            if (response.status === 403 && data.message && data.message.includes('deactivated')) {
+                // Clear authentication details from localStorage
+                localStorage.removeItem('uclose_token');
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('userEmail');
+                
+                // Only redirect if not already on the login page
+                if (window.location.pathname !== '/login') {
+                    // Force redirect to login page with error message
+                    window.location.href = `/login?error=${encodeURIComponent(data.message)}`;
+                }
+            }
             throw new Error(data.message || 'Something went wrong');
         }
         
@@ -55,6 +68,12 @@ export const api = {
         request('/api/auth/login', {
             method: 'POST',
             body: JSON.stringify({ email, password })
+        }),
+        
+    googleLogin: (credential) =>
+        request('/api/auth/google', {
+            method: 'POST',
+            body: JSON.stringify({ credential })
         }),
         
     getMe: () => 
@@ -107,6 +126,12 @@ export const api = {
         request('/api/orders', {
             method: 'POST',
             body: JSON.stringify(orderData)
+        }),
+        
+    createPaymentIntent: (amount, currency = 'usd') =>
+        request('/api/orders/payment-intent', {
+            method: 'POST',
+            body: JSON.stringify({ amount, currency })
         }),
         
     cancelOrder: (orderId) => 
